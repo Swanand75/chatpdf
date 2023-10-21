@@ -1,0 +1,57 @@
+from flask import Flask, render_template, request
+import PyPDF2  # For PDF extraction
+import openai  # For chatbot interaction
+
+app = Flask(__name__)
+openai.api_key = "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"
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    response = None
+    if request.method == 'POST':
+        uploaded_pdf = request.files['pdf']
+        question = request.form['question']
+        if uploaded_pdf:
+            pdf_text = extract_text_from_pdf(uploaded_pdf)
+            response = ask_chatbot(question, pdf_text)
+    return render_template('index.html', response=response)
+if __name__ == '__main__':
+    app.run(debug=True)
+
+import PyPDF2
+def extract_text_from_pdf(uploaded_pdf):
+    pdf_text = ""
+    pdf_reader = PyPDF2.PdfFileReader(uploaded_pdf)
+    for page_num in range(pdf_reader.numPages):
+        page = pdf_reader.getPage(page_num)
+        pdf_text += page.extractText()
+    return pdf_text
+
+import openai
+openai.api_key = "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"
+def ask_chatbot(question, context):
+    prompt = f"Question: {question}\nContext: {context}\nAnswer:"
+    response = openai.Completion.create(
+        engine="text-davinci-002",  
+        prompt=prompt,
+        max_tokens=100,
+    )
+    
+    return response.choices[0].text
+
+%%html
+<head>
+    <title>PDF Chat App</title>
+</head>
+<body>
+    <h1>PDF Chat App</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="pdf" accept=".pdf" required>
+        <input type="text" name="question" placeholder="Ask a question" required>
+        <input type="submit" value="Get Answer">
+    </form>
+    {% if response %}
+        <h2>Chatbot Answer:</h2>
+        <p>{{ response }}</p>
+    {% endif}
+</body>
+</html>
